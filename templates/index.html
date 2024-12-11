@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Management System</title>
+    <script>
+        async function processFiles() {
+            const selectedFiles = Array.from(document.querySelectorAll('input[name="filenames"]:checked'))
+                .map(input => input.value);
+
+            if (selectedFiles.length === 0) {
+                alert("Please select at least one file.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/chunk/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ filenames: selectedFiles }),
+                });
+
+                const result = await response.json();
+                alert("Chunking started in background.");
+                updateStatus();
+            } catch (error) {
+                console.error("Error:", error);
+                alert("An error occurred while processing the files.");
+            }
+        }
+
+        async function updateStatus() {
+            try {
+                const response = await fetch('/chunk/status');
+                const status = await response.json();
+
+                const statusDiv = document.getElementById('status');
+                statusDiv.innerHTML = "";
+
+                for (const [file, state] of Object.entries(status)) {
+                    const fileStatus = document.createElement('p');
+                    fileStatus.textContent = `${file}: ${state}`;
+                    statusDiv.appendChild(fileStatus);
+                }
+            } catch (error) {
+                console.error("Error fetching status:", error);
+            }
+        }
+
+        setInterval(updateStatus, 5000); // Update status every 5 seconds
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Document Management System</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/upload/">Upload Document</a>
+            <a href="/chat/">Chat with Document</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Uploaded Files</h2>
+        <form id="chunk-form">
+            <ul>
+                {% for file in files %}
+                <li>
+                    <input type="checkbox" name="filenames" value="{{ file }}" id="file-{{ loop.index }}">
+                    <label for="file-{{ loop.index }}">{{ file }}</label>
+                </li>
+                {% endfor %}
+            </ul>
+            <button type="button" onclick="processFiles()">Process Selected Files</button>
+        </form>
+        <h2>Status</h2>
+        <div id="status">
+            <p>No files in process.</p>
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Document</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #f4f4f4;
+        }
+        nav a {
+            margin: 0 10px;
+            text-decoration: none;
+            color: #333;
+        }
+        main {
+            margin: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Upload Document</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/upload/">Upload Document</a>
+            <a href="/chat/">Chat with Document</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Upload Your Document</h2>
+        <form action="/upload/file" method="post" enctype="multipart/form-data">
+            <label for="file">Choose a file to upload:</label>
+            <input type="file" id="file" name="file" required>
+            <button type="submit">Upload</button>
+        </form>
+        <div id="response"></div>
+    </main>
+    <script>
+        const form = document.querySelector('form');
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const fileInput = document.getElementById('file');
+            if (!fileInput.files.length) {
+                alert('Please select a file to upload.');
+                return;
+            }
+
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch('/upload/file', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const result = await response.json();
+                const responseDiv = document.getElementById('response');
+                responseDiv.innerHTML = `<strong>Message:</strong> <p>${result.message}</p>`;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred during file upload.');
+            }
+        });
+    </script>
+</body>
+</html>
