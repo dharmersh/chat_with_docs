@@ -50,7 +50,7 @@ def chunk_file(file_path, output_file):
 
     # Use RecursiveCharacterTextSplitter to split the text
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    chunks = text_splitter.split_documents(text)
+    chunks = text_splitter.split_text(text)
 
     # Save chunks to JSON
     with open(output_file, 'w', encoding='utf-8') as f:
