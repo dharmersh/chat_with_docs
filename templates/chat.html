@@ -4,76 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat with Document</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background-color: #f4f4f4;
-        }
-        nav a {
-            margin: 0 10px;
-            text-decoration: none;
-            color: #333;
-        }
-        main {
-            margin: 20px;
-        }
-        textarea {
-            width: 100%;
-            height: 100px;
-            margin-bottom: 20px;
-        }
-        button {
-            padding: 10px 15px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        #response {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border: 1px solid #ccc;
-        }
-    </style>
-</head>
-<body>
     <header>
-        <h1>Chat with Document</h1>
+        <h1>Upload Document</h1>
         <nav>
             <a href="/">Home</a>
             <a href="/upload/">Upload Document</a>
             <a href="/chat/">Chat with Document</a>
         </nav>
     </header>
-    <main>
-        <h2>Ask a Question About Your Documents</h2>
-        <form id="chat-form">
-            <label for="query">Enter your query:</label>
-            <textarea id="query" name="query" required></textarea>
-            <button type="button" onclick="sendQuery()">Submit</button>
-        </form>
-        <div id="response"></div>
-    </main>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <script>
         async function sendQuery() {
             const query = document.getElementById('query').value;
+
             if (!query) {
-                alert('Please enter a query.');
+                alert("Please enter a query.");
                 return;
             }
 
             try {
-                const response = await fetch('/chat', {
+                const response = await fetch('/chat/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -81,14 +31,33 @@
                     body: JSON.stringify({ query }),
                 });
 
+                if (!response.ok) {
+                    const error = await response.json();
+                    alert(`Error: ${error.message}`);
+                    return;
+                }
+
                 const result = await response.json();
-                const responseDiv = document.getElementById('response');
-                responseDiv.innerHTML = `<strong>Response:</strong> <p>${result.message}</p>`;
+                document.getElementById('response').innerText = result.response;
             } catch (error) {
-                console.error('Error:', error);
-                alert('An error occurred while processing your query.');
+                console.error("Error:", error);
+                alert("An error occurred while processing your query.");
             }
         }
     </script>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Chat with Your Documents</h1>
+        <div class="mb-3">
+            <label for="query" class="form-label">Enter your query:</label>
+            <input type="text" id="query" class="form-control" placeholder="Type your question here...">
+        </div>
+        <button class="btn btn-primary" onclick="sendQuery()">Submit</button>
+        <div class="mt-4">
+            <h3>Response:</h3>
+            <div id="response" class="border p-3"></div>
+        </div>
+    </div>
 </body>
 </html>

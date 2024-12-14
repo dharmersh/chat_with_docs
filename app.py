@@ -13,4 +13,4 @@ app.register_blueprint(chunk_page, url_prefix="/chunk")
 app.register_blueprint(chat_page, url_prefix="/chat")
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True,host="127.0.0.1" ,port=5001)
