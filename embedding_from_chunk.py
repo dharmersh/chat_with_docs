@@ -1,28 +1,32 @@
-import chunk 
 from langchain.docstore.in_memory import InMemoryDocstore 
-from  langchain_community.vectorstores import FAISS #,Chroma 
+from  langchain_community.vectorstores import FAISS ,Chroma 
 from langchain.embeddings import HuggingFaceEmbeddings 
 from langchain.schema import Document 
 import faiss 
-import json 
-import os  
+from langchain_openai import OpenAI
+import os
+import json
 import numpy as np 
 
-#CHROMA_DIR ="chroma_db" 
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
+CHROMA_DIR = "chroma_db"
 FAISS_DIR= r"faiss_db" 
 FAISS_INDEX_FILE = os.path.join(FAISS_DIR,"faiss_index.bin") 
 FAISS_METADATA_FILE = os.path.join(FAISS_DIR,"faiss_metadata.json") 
- 
+ # Directory for storing chunked documents
+CHUNK_FOLDER = "chunked_documents"
+os.makedirs(CHUNK_FOLDER, exist_ok=True)
 #initailize embedding  
 embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2") 
 
 #ensure directories exist 
-#os.makedirs(CHROMA_DIR,exist_ok=True) 
+os.makedirs(CHROMA_DIR,exist_ok=True) 
 os.makedirs(FAISS_DIR,exist_ok=True) 
 
 #initialize chroma db 
-#chroma_store = Chroma(persist_directory=CHROMA_DIR,embedding_function= embedding_model) 
+chroma_store = Chroma(persist_directory=CHROMA_DIR,embedding_function= embedding_model) 
+
 #initalize FAISS 
 if os.path.exists(FAISS_INDEX_FILE): 
     print("loading existing faiss index ....") 
@@ -46,12 +50,10 @@ faiss_store= FAISS(embedding_function=embedding_model,
                    docstore=docstore, 
                    index_to_docstore_id=index_to_docstore_id) 
 
- 
 def save_faiss(): 
     faiss_store.save_local(FAISS_DIR) 
     print("FIASS index and metadata saved") 
 
- 
 def embed_chunk_from_file(json_file ,storage_type): 
     storage_type= "faiss" 
     if not os.path.exists(json_file): 
@@ -63,7 +65,7 @@ def embed_chunk_from_file(json_file ,storage_type):
         Document(page_content= chunk["page_content"], 
                  metadata={ 
                     "fileName":chunk["filename"], 
-                     "chunk_id":i, 
+                     "chunk_id":chunk["chunk_id"], 
                      "page_number":chunk["page_number"] 
                  }) 
         for i,chunk in enumerate(chunks) 
@@ -71,8 +73,9 @@ def embed_chunk_from_file(json_file ,storage_type):
 
     if storage_type == "faiss": 
         store_in_faiss(documents) 
+    else:
+        store_in_chroma(documents) 
 
- 
 def store_in_faiss(documents): 
     faiss_store.add_documents(documents=documents) 
     #save Metatdata  
@@ -94,10 +97,41 @@ def store_in_faiss(documents):
     save_faiss()  
     print("Data successfully stored in FAISS")  
 
+def store_in_chroma(documents):
+    chroma_store.add_documents(documents)
+    chroma_store.persist()
+    print("Data stored in ChromaDB")
+
 def retrieve_documents_from_faiss(query,n_results=5): 
     results = faiss_store.similarity_search(query=query,k=n_results) 
-    return [{ 
-        "content":result.page_content, 
-        "metadata": result.metadata 
-        } for result in results ] 
+    return [
+        { 
+            "content":result.page_content, 
+            "metadata": result.metadata 
+        } 
+        for result in results 
+        ] 
 
+def retrieve_documents_from_chroma(query, n_results=3):
+    results = chroma_store.similarity_search(query, k=n_results)
+    return [
+        {
+            "content": result.page_content,
+            "metadata": result.metadata
+        }
+        for result in results
+    ]
+    
+
+def generate_answer(context, query):
+    try:
+        prompt = f"""
+        You are an assistant answering strictly based on the provided context. 
+        If the answer is not in the context, respond with:
+        'The information is not available in the provided document
+        
+        Use the following context to answer the query:\n\n{context}\n\nQuery: {query}"""
+        response=client(prompt)
+        return response
+    except Exception as e:
+        raise RuntimeError(f"Error generating answer: {str(e)}")

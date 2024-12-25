@@ -6,7 +6,6 @@ from flask import Blueprint, request, jsonify
 from langchain.text_splitter import RecursiveCharacterTextSplitter 
 from PyPDF2 import PdfReader 
 from langchain.schema import Document 
-
 import embedding_from_chunk as embed 
 
 chunk_page = Blueprint('chunk_page', __name__) 
@@ -43,30 +42,35 @@ def extract_text_from_docx(file_path):
  
 def extract_text_from_general(file_path): 
     with open(file_path,'r',encoding='utf-8') as f: 
-        text = [{"page-content":f.read(),"page_number":1,"chunk_id": 1}]
+        text = [{"page_content":f.read(),"page_number":1,"chunk_id": 1}]
+     
+    return text 
 
 def chunk_file(file_path, output_file,storage_type): 
     # Determine file type based on extension 
     _, file_extension = os.path.splitext(file_path) 
     file_extension = file_extension.lower() 
     file_name= os.path.basename(file_path)   
-   
+
     if file_extension == ".pdf": 
         text = extract_text_from_pdf(file_path) 
      
     elif file_extension == ".docx": 
         text = extract_text_from_docx(file_path) 
     elif file_extension == ".txt": 
+      
         text = extract_text_from_general(file_path) 
     else: 
         raise ValueError(f"Unsupported file type: {file_extension}") 
- 
+    
     # Use RecursiveCharacterTextSplitter to split the text 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200) 
     chunks = [] 
-
+    print("document",text)
     for item in text: 
+     
         document = Document(page_content=item["page_content"]) 
+     
         split_chunks = text_splitter.split_documents([document]) 
         for chunk in split_chunks: 
             chunks.append({ 
@@ -92,6 +96,7 @@ def chunk_file(file_path, output_file,storage_type):
  
     
     #return chunks 
+
 def process_files_in_background(filenames,storage_type): 
     for filename in filenames: 
         file_path = os.path.join(UPLOAD_FOLDER, filename) 
@@ -118,14 +123,17 @@ def process_chunk():
             result[filename]="file not found" 
             continue 
      # Start background processing 
+    print ("filename",filenames)
     process_files_in_background(filenames,storage_type) 
     # Initialize status for files 
     for filename in filenames: 
         chunking_status[filename] = "Chunking and embedding done " 
     return jsonify({"message": "Chunking started in background", "status": chunking_status[filename]})  
 
- 
 @chunk_page.route('/status', methods=['GET'])
+
+
+
 def get_status():
     """
     Returns the current status of chunking as JSON.
@@ -142,3 +150,4 @@ def get_status():
     except Exception as e:
         print(f"Error in get_status: {e}")
         return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
+    
